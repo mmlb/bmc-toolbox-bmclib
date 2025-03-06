@@ -22,10 +22,32 @@ func main() {
 	isoURL := flag.String("iso", "", "The HTTP URL to the ISO to be mounted, leave empty to unmount")
 	flag.Parse()
 
-	if *user == "" || *pass == "" || *host == "" {
-		fmt.Fprintln(os.Stderr, "user, password, and host are required")
-		flag.PrintDefaults()
-		os.Exit(1)
+	if *user == "" {
+		u := os.Getenv("BMC_USER")
+		if u == "" {
+			fmt.Fprintln(os.Stderr, "user arg or BMC_USER env is required")
+			flag.PrintDefaults()
+			os.Exit(1)
+		}
+		*user = u
+	}
+	if *pass == "" {
+		p := os.Getenv("BMC_PASS")
+		if p == "" {
+			fmt.Fprintln(os.Stderr, "pass arg or BMC_PASSWORD env is required")
+			flag.PrintDefaults()
+			os.Exit(1)
+		}
+		*pass = p
+	}
+	if *host == "" {
+		h := os.Getenv("BMC_HOST")
+		if h == "" {
+			fmt.Fprintln(os.Stderr, "host arg or BMC_HOST env is required")
+			flag.PrintDefaults()
+			os.Exit(1)
+		}
+		*host = h
 	}
 
 	l := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{AddSource: true}))
