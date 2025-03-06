@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"slices"
 
 	"github.com/bmc-toolbox/bmclib/v2/bmc"
@@ -112,11 +113,22 @@ func (c *Client) SetVirtualMedia(ctx context.Context, kind, mediaURL string) (bo
 				return false, fmt.Errorf("BMC does not support inserting virtual media of kind: %s", kind)
 			}
 
+			u, err := url.Parse(mediaURL)
+			if err != nil {
+				return false, fmt.Errorf("unable to parse media URL: %w", err)
+			}
+
+			username := u.User.Username()
+			password, _ := u.User.Password()
+			u.User = nil
+
 			// Create the VirtualMediaConfig
 			config := rf.VirtualMediaConfig{
-				Image:          mediaURL,
+				Image:          u.String(),
 				Inserted:       true,
 				WriteProtected: true,
+				UserName:       username,
+				Password:       password,
 			}
 
 			// Try inserting media with the config
