@@ -59,14 +59,34 @@ func main() {
 	}
 	defer cl.Close(ctx)
 
-	ok, err := cl.SetVirtualMedia(ctx, "CD", *isoURL)
-	if err != nil {
-		log.Info("debugging", "metadata", cl.GetMetadata())
-		panic(err)
+	if *isoURL == "" {
+		medias, err := cl.GetVirtualMedia(ctx)
+		if err != nil {
+			log.Info("debugging", "metadata", cl.GetMetadata())
+			panic(err)
+		}
+		log.Info("virtual media operation successful", "metadata", cl.GetMetadata())
+		fmt.Println(medias)
+		for _, media := range medias {
+			fmt.Printf("\n{\n")
+			fmt.Println(" Image:", media.Image)
+			fmt.Println(" MediaType:", media.MediaType)
+			fmt.Println(" UserName:", media.UserName)
+			fmt.Println(" Password:", media.Password)
+			fmt.Println(" Inserted:", media.Inserted)
+			fmt.Println(" WriteProtected:", media.WriteProtected)
+			fmt.Printf("}\n")
+		}
+	} else {
+		ok, err := cl.SetVirtualMedia(ctx, "CD", *isoURL)
+		if err != nil {
+			log.Info("debugging", "metadata", cl.GetMetadata())
+			panic(err)
+		}
+		if !ok {
+			log.Info("debugging", "metadata", cl.GetMetadata())
+			panic("failed virtual media operation")
+		}
+		log.Info("virtual media operation successful", "metadata", cl.GetMetadata())
 	}
-	if !ok {
-		log.Info("debugging", "metadata", cl.GetMetadata())
-		panic("failed virtual media operation")
-	}
-	log.Info("virtual media operation successful", "metadata", cl.GetMetadata())
 }

@@ -212,6 +212,11 @@ func (c *Conn) BootDeviceOverrideGet(ctx context.Context) (bmc.BootDeviceOverrid
 	return c.redfishwrapper.GetBootDeviceOverride(ctx)
 }
 
+// GetVirtualMedia gets the virtual media
+func (c *Conn) GetVirtualMedia(ctx context.Context) ([]bmc.VirtualMediaConfig, error) {
+	return c.redfishwrapper.GetVirtualMedia(ctx)
+}
+
 // SetVirtualMedia sets the virtual media
 func (c *Conn) SetVirtualMedia(ctx context.Context, kind, mediaURL string) (ok bool, err error) {
 	return c.redfishwrapper.SetVirtualMedia(ctx, kind, mediaURL)

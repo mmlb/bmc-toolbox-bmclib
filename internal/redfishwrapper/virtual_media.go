@@ -6,8 +6,50 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/bmc-toolbox/bmclib/v2/bmc"
 	rf "github.com/stmcginnis/gofish/redfish"
 )
+
+func (c *Client) GetVirtualMedia(ctx context.Context) ([]bmc.VirtualMediaConfig, error) {
+	managers, err := c.Managers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if len(managers) == 0 {
+		return nil, errors.New("no redfish managers found")
+	}
+
+	medias := []bmc.VirtualMediaConfig{}
+	for _, m := range managers {
+		virtualMedia, err := m.VirtualMedia()
+		if err != nil {
+			return nil, err
+		}
+		if len(virtualMedia) == 0 {
+			return nil, errors.New("no virtual media found")
+		}
+
+		for _, vm := range virtualMedia {
+			if vm.Image == "" {
+				continue
+			}
+
+			m := bmc.VirtualMediaConfig{
+				Image:          transferProtocol2Scheme(vm.TransferProtocolType) + ":" + vm.Image,
+				UserName:       vm.UserName,
+				Password:       vm.Password,
+				Inserted:       vm.Inserted,
+				WriteProtected: vm.WriteProtected,
+			}
+			if len(vm.MediaTypes) > 0 {
+				m.MediaType = string(vm.MediaTypes[0])
+			}
+			medias = append(medias, m)
+		}
+	}
+
+	return medias, nil
+}
 
 // Set the virtual media attached to the system, or just eject everything if mediaURL is empty.
 func (c *Client) SetVirtualMedia(ctx context.Context, kind, mediaURL string) (bool, error) {
@@ -82,6 +124,31 @@ func (c *Client) SetVirtualMedia(ctx context.Context, kind, mediaURL string) (bo
 	}
 
 	return false, fmt.Errorf("not a supported media type: %s. supported media types: %v", kind, supportedMediaTypes)
+}
+
+func transferProtocol2Scheme(proto rf.TransferProtocolType) string {
+	switch proto {
+	case rf.CIFSTransferProtocolType:
+		return "cifs"
+	case rf.FTPTransferProtocolType:
+		return "ftp"
+	case rf.HTTPTransferProtocolType:
+		return "http"
+	case rf.HTTPSTransferProtocolType:
+		return "https"
+	case rf.NFSTransferProtocolType:
+		return "nfs"
+	case rf.OEMTransferProtocolType:
+		return "oem"
+	case rf.SCPTransferProtocolType:
+		return "scp"
+	case rf.SFTPTransferProtocolType:
+		return "sftp"
+	case rf.TFTPTransferProtocolType:
+		return "tftpt"
+	default:
+		return "(unknown)"
+	}
 }
 
 func (c *Client) InsertedVirtualMedia(ctx context.Context) ([]string, error) {

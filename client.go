@@ -498,6 +498,18 @@ func (c *Client) SetBootDevice(ctx context.Context, bootDevice string, setPersis
 	return ok, err
 }
 
+// GetVirtualMedia returns the virtual media configured in the BMC.
+func (c *Client) GetVirtualMedia(ctx context.Context) ([]bmc.VirtualMediaConfig, error) {
+	ctx, span := c.traceprovider.Tracer(pkgName).Start(ctx, "GetVirtualMedia")
+	defer span.End()
+
+	metadata, medias, err := bmc.GetVirtualMediaFromInterfaces(ctx, c.registry().GetDriverInterfaces())
+	c.setMetadata(metadata)
+	metadata.RegisterSpanAttributes(c.Auth.Host, span)
+
+	return medias, err
+}
+
 // SetVirtualMedia controls the virtual media simulated by the BMC as being connected to the
 // server. Specifically, the method ejects any currently attached virtual media, and then if
 // mediaURL isn't empty, attaches a virtual media device of type kind whose contents are

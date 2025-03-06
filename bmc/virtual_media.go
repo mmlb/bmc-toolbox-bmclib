@@ -8,6 +8,20 @@ import (
 	"github.com/pkg/errors"
 )
 
+type VirtualMediaConfig struct {
+	Image          string
+	MediaType      string
+	Password       string
+	UserName       string
+	Inserted       bool
+	WriteProtected bool
+}
+
+// VirtualMediaGetter gets the virtual media attached to a machine
+type VirtualMediaGetter interface {
+	GetVirtualMedia(ctx context.Context) (medias []VirtualMediaConfig, err error)
+}
+
 // VirtualMediaSetter controls the virtual media attached to a machine
 type VirtualMediaSetter interface {
 	SetVirtualMedia(ctx context.Context, kind, mediaURL string) (ok bool, err error)
@@ -17,6 +31,48 @@ type VirtualMediaSetter interface {
 type virtualMediaProviders struct {
 	name               string
 	virtualMediaSetter VirtualMediaSetter
+}
+
+// GetVirtualMediaFromInterfaces identifies implementations of the VirtualMediaGetter interface and queries them for any VirtualMedia that have been configured
+func GetVirtualMediaFromInterfaces(ctx context.Context, generic []interface{}) (Metadata, []VirtualMediaConfig, error) {
+	var md Metadata
+	var err error
+	for _, elem := range generic {
+		if elem == nil {
+			continue
+		}
+
+		name := getProviderName(elem)
+		getter, ok := elem.(VirtualMediaGetter)
+		if !ok {
+			e := fmt.Sprintf("not a VirtualMediaGetter implementation: %T", elem)
+			err = multierror.Append(err, errors.New(e))
+			continue
+		}
+
+		select {
+		case <-ctx.Done():
+			return md, nil, multierror.Append(err, ctx.Err())
+		default:
+			md.ProvidersAttempted = append(md.ProvidersAttempted, name)
+
+			medias, err := getter.GetVirtualMedia(ctx)
+			if err != nil {
+				err = multierror.Append(err, errors.WithMessagef(err, "provider: %v", name))
+				continue
+			}
+
+			if len(medias) == 0 {
+				err = multierror.Append(err, fmt.Errorf("provider: %v, failed to get virtual media", name))
+				continue
+			}
+
+			md.SuccessfulProvider = name
+			return md, medias, nil
+		}
+	}
+
+	return md, nil, multierror.Append(err, errors.New("failed to get virtual media"))
 }
 
 // setVirtualMedia sets the virtual media.
