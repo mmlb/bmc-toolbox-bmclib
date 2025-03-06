@@ -112,10 +112,21 @@ func (c *Client) SetVirtualMedia(ctx context.Context, kind, mediaURL string) (bo
 				return false, fmt.Errorf("BMC does not support inserting virtual media of kind: %s", kind)
 			}
 
-			if err := vm.InsertMedia(mediaURL, true, true); err != nil {
+			// Create the VirtualMediaConfig
+			config := rf.VirtualMediaConfig{
+				Image:          mediaURL,
+				Inserted:       true,
+				WriteProtected: true,
+			}
+
+			// Try inserting media with the config
+			err = vm.InsertMediaConfig(config)
+			if err != nil {
 				// Some BMC's (Supermicro X11SDV-4C-TLN2F, for example) don't support the "inserted" and "writeProtected" properties,
 				// so we try to insert the media without them if the first attempt fails.
-				if err := vm.InsertMediaConfig(rf.VirtualMediaConfig{Image: mediaURL}); err != nil {
+				config.Inserted = false
+				config.WriteProtected = false
+				if err := vm.InsertMediaConfig(config); err != nil {
 					return false, err
 				}
 			}
