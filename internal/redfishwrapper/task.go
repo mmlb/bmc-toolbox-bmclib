@@ -58,7 +58,7 @@ func (c *Client) taskMessagesAsString(messages []common.Message) string {
 		return ""
 	}
 
-	var found []string
+	var found []string // nolint:prealloc
 	for _, m := range messages {
 		if m.Message == "" {
 			continue
@@ -74,13 +74,13 @@ func (c *Client) ConvertTaskState(state string) constants.TaskState {
 	switch strings.ToLower(state) {
 	case "starting", "downloading", "downloaded", "scheduling":
 		return constants.Initializing
-	case "running", "stopping", "cancelling":
+	case "running", "stopping", "canceling":
 		return constants.Running
 	case "pending", "new":
 		return constants.Queued
 	case "scheduled":
 		return constants.PowerCycleHost
-	case "interrupted", "killed", "exception", "cancelled", "suspended", "failed":
+	case "interrupted", "killed", "exception", "canceled", "suspended", "failed":
 		return constants.Failed
 	case "completed":
 		return constants.Complete
@@ -95,6 +95,8 @@ func (c *Client) TaskStateActive(state constants.TaskState) (bool, error) {
 		return true, nil
 	case constants.Complete, constants.Failed:
 		return false, nil
+	case constants.PowerCycleHost, constants.Unknown:
+		fallthrough
 	default:
 		return false, errors.Wrap(errUnexpectedTaskState, string(state))
 	}

@@ -148,12 +148,20 @@ func (c *Client) defaultTimeout(ctx context.Context) time.Duration {
 	return time.Until(deadline) / time.Duration(l)
 }
 
+func cloneHTTPClient(old *http.Client) *http.Client {
+	client := *old
+	transport, ok := client.Transport.(*http.Transport)
+	if !ok {
+		panic("old client's transport is not expected type")
+	}
+	client.Transport = transport.Clone()
+	return &client
+}
+
 func (c *Client) registerRPCProvider() error {
 	driverRPC := rpc.New(c.providerConfig.rpc.ConsumerURL, c.Auth.Host, c.providerConfig.rpc.Opts.HMAC.Secrets)
 	c.providerConfig.rpc.Logger = c.Logger
-	httpClient := *c.httpClient
-	httpClient.Transport = c.httpClient.Transport.(*http.Transport).Clone()
-	c.providerConfig.rpc.HTTPClient = &httpClient
+	c.providerConfig.rpc.HTTPClient = cloneHTTPClient(c.httpClient)
 	if err := mergo.Merge(driverRPC, c.providerConfig.rpc, mergo.WithOverride, mergo.WithTransformers(&rpc.Provider{})); err != nil {
 		return fmt.Errorf("failed to merge user specified rpc config with the config defaults, rpc provider not available: %w", err)
 	}
@@ -183,18 +191,15 @@ func (c *Client) registerIPMIProvider() error {
 
 // register ASRR vendorapi provider
 func (c *Client) registerASRRProvider() {
-	asrHttpClient := *c.httpClient
-	asrHttpClient.Transport = c.httpClient.Transport.(*http.Transport).Clone()
-	driverAsrockrack := asrockrack.NewWithOptions(c.Auth.Host+":"+c.providerConfig.asrock.Port, c.Auth.User, c.Auth.Pass, c.Logger, asrockrack.WithHTTPClient(&asrHttpClient))
+	asrHttpClient := cloneHTTPClient(c.httpClient)
+	driverAsrockrack := asrockrack.NewWithOptions(c.Auth.Host+":"+c.providerConfig.asrock.Port, c.Auth.User, c.Auth.Pass, c.Logger, asrockrack.WithHTTPClient(asrHttpClient))
 	c.Registry.Register(asrockrack.ProviderName, asrockrack.ProviderProtocol, asrockrack.Features, nil, driverAsrockrack)
 }
 
 // register gofish provider
 func (c *Client) registerGofishProvider() {
-	gfHttpClient := *c.httpClient
-	gfHttpClient.Transport = c.httpClient.Transport.(*http.Transport).Clone()
 	gofishOpts := []redfish.Option{
-		redfish.WithHttpClient(&gfHttpClient),
+		redfish.WithHttpClient(cloneHTTPClient(c.httpClient)),
 		redfish.WithVersionsNotCompatible(c.providerConfig.gofish.VersionsNotCompatible),
 		redfish.WithUseBasicAuth(c.providerConfig.gofish.UseBasicAuth),
 		redfish.WithPort(c.providerConfig.gofish.Port),
@@ -233,14 +238,12 @@ func (c *Client) registerDellProvider() {
 
 // register supermicro vendorapi provider
 func (c *Client) registerSupermicroProvider() {
-	smcHttpClient := *c.httpClient
-	smcHttpClient.Transport = c.httpClient.Transport.(*http.Transport).Clone()
 	driverSupermicro := supermicro.NewClient(
 		c.Auth.Host,
 		c.Auth.User,
 		c.Auth.Pass,
 		c.Logger,
-		supermicro.WithHttpClient(&smcHttpClient),
+		supermicro.WithHttpClient(cloneHTTPClient(c.httpClient)),
 		supermicro.WithPort(c.providerConfig.supermicro.Port),
 	)
 
@@ -248,14 +251,12 @@ func (c *Client) registerSupermicroProvider() {
 }
 
 func (c *Client) registerOpenBMCProvider() {
-	httpClient := *c.httpClient
-	httpClient.Transport = c.httpClient.Transport.(*http.Transport).Clone()
 	driver := openbmc.New(
 		c.Auth.Host,
 		c.Auth.User,
 		c.Auth.Pass,
 		c.Logger,
-		openbmc.WithHttpClient(&httpClient),
+		openbmc.WithHttpClient(cloneHTTPClient(c.httpClient)),
 		openbmc.WithPort(c.providerConfig.openbmc.Port),
 	)
 
@@ -371,7 +372,7 @@ func (c *Client) Open(ctx context.Context) error {
 }
 
 // Close pass through to library function
-func (c *Client) Close(ctx context.Context) (err error) {
+func (c *Client) Close(ctx context.Context) (err error) { // nolint:contextcheck
 	ctx, span := c.traceprovider.Tracer(pkgName).Start(ctx, "Close")
 	defer span.End()
 
@@ -501,7 +502,7 @@ func (c *Client) SetBootDevice(ctx context.Context, bootDevice string, setPersis
 // server. Specifically, the method ejects any currently attached virtual media, and then if
 // mediaURL isn't empty, attaches a virtual media device of type kind whose contents are
 // streamed from the indicated URL.
-func (c *Client) SetVirtualMedia(ctx context.Context, kind string, mediaURL string) (ok bool, err error) {
+func (c *Client) SetVirtualMedia(ctx context.Context, kind, mediaURL string) (ok bool, err error) {
 	ctx, span := c.traceprovider.Tracer(pkgName).Start(ctx, "SetVirtualMedia")
 	defer span.End()
 
@@ -588,7 +589,7 @@ func (c *Client) ResetBiosConfiguration(ctx context.Context) (err error) {
 }
 
 // FirmwareInstall pass through library function to upload firmware and install firmware
-func (c *Client) FirmwareInstall(ctx context.Context, component string, operationApplyTime string, forceInstall bool, reader io.Reader) (taskID string, err error) {
+func (c *Client) FirmwareInstall(ctx context.Context, component, operationApplyTime string, forceInstall bool, reader io.Reader) (taskID string, err error) {
 	ctx, span := c.traceprovider.Tracer(pkgName).Start(ctx, "FirmwareInstall")
 	defer span.End()
 
@@ -599,7 +600,7 @@ func (c *Client) FirmwareInstall(ctx context.Context, component string, operatio
 	return taskID, err
 }
 
-// Note: this interface is to be deprecated in favour of a more generic FirmwareTaskStatus.
+// Note: this interface is to be deprecated in favor of a more generic FirmwareTaskStatus.
 //
 // FirmwareInstallStatus pass through library function to check firmware install status
 func (c *Client) FirmwareInstallStatus(ctx context.Context, installVersion, component, taskID string) (status string, err error) {

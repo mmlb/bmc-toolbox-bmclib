@@ -111,7 +111,6 @@ func (c *Conn) UserCreate(ctx context.Context, user, pass, role string) (ok bool
 			continue
 		}
 
-		account := account
 		if account.UserName == user {
 			return false, errors.Wrap(ErrUserExists, user)
 		}
@@ -158,7 +157,6 @@ func (c *Conn) UserDelete(ctx context.Context, user string) (ok bool, err error)
 			continue
 		}
 
-		account := account
 		if account.UserName == user {
 			account.Enabled = false
 			account.UserName = ""

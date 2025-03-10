@@ -119,7 +119,6 @@ func (c *Client) SystemReset(ctx context.Context) (ok bool, err error) {
 		system.DisableEtagMatch(c.disableEtagMatch)
 		err = system.Reset(rf.PowerCycleResetType)
 		if err != nil {
-
 			_, _ = c.SystemPowerOff(ctx)
 
 			for wait := 1; wait < 10; wait++ {
@@ -154,7 +153,7 @@ func (c *Client) SystemPowerCycle(ctx context.Context) (ok bool, err error) {
 		return false, fmt.Errorf("power cycle failed: unable to get current state")
 	}
 
-	if strings.ToLower(res) == "off" {
+	if strings.EqualFold(res, "off") {
 		return false, fmt.Errorf("power cycle failed: Command not supported in present state: %v", res)
 	}
 

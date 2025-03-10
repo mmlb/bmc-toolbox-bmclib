@@ -39,7 +39,7 @@ func TestRunRequestWithMultipartPayload(t *testing.T) {
 	defer os.Remove(binPath)
 
 	multipartEndpoint := func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "POST" {
+		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusNotFound)
 		}
 
@@ -115,13 +115,14 @@ func TestRunRequestWithMultipartPayload(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			_, err = client.runRequestWithMultipartPayload(tc.updateURI, tc.payload)
+			resp, err := client.runRequestWithMultipartPayload(tc.updateURI, tc.payload)
 			if tc.err != nil {
 				assert.ErrorContains(t, err, tc.err.Error())
 				return
 			}
 
 			assert.Nil(t, err)
+			resp.Body.Close()
 			client.Close(context.Background())
 		})
 	}
@@ -392,7 +393,7 @@ func TestMultipartPayloadSize(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
-			gotSize, _, err := multipartPayloadSize(tc.payload)
+			gotSize, err := multipartPayloadSize(tc.payload)
 			if tc.errorMsg != "" {
 				assert.Contains(t, err.Error(), tc.errorMsg)
 			}

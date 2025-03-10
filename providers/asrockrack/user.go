@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pkg/errors"
-
 	bmclibErrs "github.com/bmc-toolbox/bmclib/v2/errors"
 	"github.com/bmc-toolbox/bmclib/v2/internal"
+	"github.com/pkg/errors"
 )
 
 // TODO: standardize these across Redfish, IPMI, Vendor GUI
@@ -93,7 +92,6 @@ func (a *ASRockRack) UserCreate(ctx context.Context, user, pass, role string) (o
 			continue
 		}
 
-		account := account
 		if account.Name == user {
 			return false, errors.Wrap(bmclibErrs.ErrUserAccountExists, user)
 		}
@@ -132,7 +130,6 @@ func (a *ASRockRack) UserUpdate(ctx context.Context, user, pass, role string) (o
 
 	// identify account slot not in use
 	for _, account := range accounts {
-		account := account
 		if account.Name == user {
 			user := newUserAccount(account.ID, user, pass, role)
 

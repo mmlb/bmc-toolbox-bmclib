@@ -413,7 +413,7 @@ func (a *ASRockRack) fruInfo(ctx context.Context) ([]*fru, error) {
 		return nil, fmt.Errorf("non 200 response: %d", statusCode)
 	}
 
-	data := []map[string]*fru{}
+	data := []map[string]*fru{} // nolint:musttag
 	err = json.Unmarshal(resp, &data)
 	if err != nil {
 		return nil, err
@@ -600,7 +600,7 @@ func (a *ASRockRack) queryHTTPS(ctx context.Context, endpoint, method string, pa
 	}
 
 	// add headers
-	req.Header.Add("X-CSRFTOKEN", a.loginSession.CSRFToken)
+	req.Header.Add("X-Csrftoken", a.loginSession.CSRFToken)
 	for k, v := range headers {
 		req.Header.Add(k, v)
 	}

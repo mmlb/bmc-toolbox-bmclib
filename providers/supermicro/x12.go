@@ -124,8 +124,6 @@ func (c *x12) firmwareTaskActive(ctx context.Context, component string) error {
 	}
 
 	for _, t := range tasks {
-		t := t
-
 		if stateFinalized(t.TaskState) {
 			continue
 		}

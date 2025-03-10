@@ -7,12 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
-
 	"github.com/bmc-toolbox/bmclib/v2/constants"
 	bmclibErrs "github.com/bmc-toolbox/bmclib/v2/errors"
 	"github.com/bmc-toolbox/bmclib/v2/internal"
 	"github.com/bmc-toolbox/common"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -185,7 +184,7 @@ func (a *ASRockRack) FirmwareTaskStatus(ctx context.Context, kind constants.Firm
 }
 
 // firmwareUpdateBIOSStatus returns the BIOS firmware install status
-func (a *ASRockRack) firmwareUpdateStatus(ctx context.Context, component string, installVersion string) (state constants.TaskState, status string, err error) {
+func (a *ASRockRack) firmwareUpdateStatus(ctx context.Context, component, installVersion string) (state constants.TaskState, status string, err error) {
 	var endpoint string
 	component = strings.ToUpper(component)
 	switch component {
@@ -216,7 +215,7 @@ func (a *ASRockRack) firmwareUpdateStatus(ctx context.Context, component string,
 		case 2:
 			return constants.Complete, status, nil
 		default:
-			a.log.V(3).WithValues("state", progress.State).Info("warn", "bmc returned unknown flash progress state")
+			a.log.V(3).WithValues("state", progress.State).Info("warn: bmc returned unknown flash progress state")
 		}
 	}
 
@@ -263,7 +262,7 @@ func (a *ASRockRack) versionInstalled(ctx context.Context, component, version st
 	fwInfo, err := a.firmwareInfo(ctx)
 	if err != nil {
 		err = errors.Wrap(err, "error querying for firmware info: ")
-		a.log.V(3).Info("warn", err.Error())
+		a.log.V(3).Info("warn", "err", err.Error())
 		return versionStrError, err
 	}
 
